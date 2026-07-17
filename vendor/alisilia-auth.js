@@ -153,6 +153,17 @@
     return callFn('video-lookup', { video_id: videoId }, { timeoutMs: 12000 });
   }
 
+  // category: 'all' | 'development' | 'automation' | 'business' | 'economics' | 'other'
+  // Videos are already classified + ranked server-side (see public-feed
+  // edge function) -- this just fetches whatever it hands back.
+  function getPublicFeed(category, limit) {
+    return callFn(
+      'public-feed',
+      { category: category || 'all', limit: limit || 60 },
+      { timeoutMs: 15000 }
+    );
+  }
+
   function updateDescription(description) {
     return callFn('update-description', { description: description });
   }
@@ -642,6 +653,7 @@
     startAutoSync: startAutoSync,
     getPublicProfile: getPublicProfile,
     getVideoByID: getVideoByID,
+    getPublicFeed: getPublicFeed,
     updateDescription: updateDescription,
     toggleFollow: toggleFollow,
     toggleVideoReaction: toggleVideoReaction
