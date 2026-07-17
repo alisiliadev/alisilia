@@ -906,7 +906,10 @@
       '</a>'
     );
   }
-
+</script>
+  
+<script src="/vendor/alisilia-auth.js"></script>  
+<script>
   let currentCategory = 'all';
   let requestToken = 0;
 
@@ -916,6 +919,8 @@
 
     renderSkeletons();
     feedStatus.innerHTML = '<span class="dot"></span>Loading ' + (CATEGORY_LABELS[category] || category) + ' videos.';
+
+    
 
     AlisiliaAuth.getPublicFeed(category, 60)
       .then(function(data){
@@ -951,7 +956,6 @@
 </script>
 
 
-<script src="/vendor/alisilia-auth.js"></script>
 <script>
   // --- Custom username/password + Flowery Key auth (no Supabase Auth) ---
   const authArea = document.getElementById('authArea');
