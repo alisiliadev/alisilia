@@ -807,12 +807,10 @@
 </script>
 
 <nav class="subnav" id="subnav">
-  <a href="#" class="active" data-category="all">All</a>
-  <a href="#" data-category="development">Development</a>
-  <a href="#" data-category="automation">Automation</a>
-  <a href="#" data-category="business">Business</a>
-  <a href="#" data-category="economics">Economics</a>
-  <a href="#" data-category="other">Other</a>
+  <!-- Populated at runtime from the list-categories edge function -- see
+       the feed script below. No categories are hardcoded here so the
+       classifier (_shared/classifier.ts) stays the single source of
+       truth for what exists and what it's called. -->
 </nav>
 
 <section class="hero">
@@ -847,14 +845,11 @@
   const feedStatus = document.querySelector('.feed-status');
   const subnav = document.getElementById('subnav');
 
-  const CATEGORY_LABELS = {
-    all: "your feed, structured",
-    development: "Development",
-    automation: "Automation",
-    business: "Business",
-    economics: "Economics",
-    other: "Other"
-  };
+  // Filled in once the list-categories edge function responds (see
+  // loadCategories() below) -- nothing is hardcoded here. "all" gets a
+  // friendlier status-bar label than its nav label ("All"), so it's
+  // special-cased after the fetch.
+  let CATEGORY_LABELS = {};
 
   const skeletonCard = () => `
     <div class="card-sk">
@@ -950,8 +945,38 @@
     loadFeed(link.getAttribute('data-category'));
   });
 
-  renderSkeletons();
-  loadFeed('all');
+  function renderSubnav(categories){
+    subnav.innerHTML = categories.map(function(c, i){
+      return '<a href="#" class="' + (i === 0 ? 'active' : '') + '" data-category="' +
+        escapeHtml(c.key) + '">' + escapeHtml(c.label) + '</a>';
+    }).join('');
+  }
+
+  function loadCategories(){
+    feedStatus.innerHTML = '<span class="dot"></span>Loading categories.';
+    renderSkeletons();
+
+    AlisiliaAuth.getCategories()
+      .then(function(data){
+        const categories = (data && data.categories) || [];
+        if (categories.length === 0) throw new Error('No categories returned.');
+
+        categories.forEach(function(c){ CATEGORY_LABELS[c.key] = c.label; });
+        // "all" gets a friendlier feed-status phrase than its nav label.
+        if (CATEGORY_LABELS.all) CATEGORY_LABELS.all = "your feed, structured";
+
+        renderSubnav(categories);
+        loadFeed(categories[0].key);
+      })
+      .catch(function(err){
+        subnav.innerHTML = '';
+        grid.innerHTML = '<div class="feed-error">Could not load categories right now.</div>';
+        feedStatus.textContent = 'Failed to load';
+        window.toast(err && err.message ? err.message : 'Could not load categories.', 'Feed error');
+      });
+  }
+
+  loadCategories();
 </script>
 
 

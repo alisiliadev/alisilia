@@ -153,9 +153,18 @@
     return callFn('video-lookup', { video_id: videoId }, { timeoutMs: 12000 });
   }
 
-  // category: 'all' | 'development' | 'automation' | 'business' | 'economics' | 'other'
-  // Videos are already classified + ranked server-side (see public-feed
-  // edge function) -- this just fetches whatever it hands back.
+  // Category list (keys + display labels) lives server-side in
+  // _shared/classifier.ts and is exposed via the list-categories edge
+  // function -- callers should never hardcode the category set, since
+  // it's added to / renamed / removed from that one file only.
+  function getCategories() {
+    return callFn('list-categories', {}, { timeoutMs: 12000 });
+  }
+
+  // category: one of the keys returned by getCategories() (e.g. 'all',
+  // 'development', 'other', ...). Videos are already classified +
+  // ranked server-side (see public-feed edge function) -- this just
+  // fetches whatever it hands back.
   function getPublicFeed(category, limit) {
     return callFn(
       'public-feed',
@@ -654,6 +663,7 @@
     getPublicProfile: getPublicProfile,
     getVideoByID: getVideoByID,
     getPublicFeed: getPublicFeed,
+    getCategories: getCategories,
     updateDescription: updateDescription,
     toggleFollow: toggleFollow,
     toggleVideoReaction: toggleVideoReaction
