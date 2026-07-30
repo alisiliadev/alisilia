@@ -1,0 +1,16 @@
+name: Review video categories
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # once a day -- odd minute so it's not fighting every other repo's :00 jobs
+  workflow_dispatch: {}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cron-review-categories
+        run: |
+          curl -fsS -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/cron-review-categories" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
