@@ -238,11 +238,32 @@
     });
   }
 
-  function syncCreatorVideos() {
-    return callFn('sync-youtube-videos', {}, { timeoutMs: 20000 }).then(function (data) {
+  function syncCreatorVideos(mode) {
+    return callFn('sync-youtube-videos', { mode: mode === 'auto' ? 'auto' : 'manual' }, { timeoutMs: 20000 }).then(function (data) {
       if (connectionCache) connectionCache.last_synced_at = data.synced_at;
       return data;
     });
+  }
+
+  // Videos a manual sync couldn't resolve on its own -- 2+ JIC category
+  // hashtags on the title (see _shared/youtube-rss.ts server-side).
+  // Powers the "needs a category" panel on /connect.
+  function getPendingCategories() {
+    return callFn('list-pending-categories', {}, { timeoutMs: 12000 });
+  }
+
+  // category: one of the keys from getCategories() -- either resolving a
+  // pending pick from getPendingCategories(), or overriding a category
+  // the classifier/a single hashtag already assigned.
+  function resolveVideoCategory(videoId, category) {
+    return callFn('resolve-video-category', { video_id: videoId, category: category }, { timeoutMs: 12000 });
+  }
+
+  // "Is this the right category?" on the watch page. vote: true (yes) or
+  // false (no). Only counts toward the 12-day community review if the
+  // voter's been active recently -- see _shared/activity.ts server-side.
+  function voteVideoCategory(videoId, vote) {
+    return callFn('category-vote', { video_id: videoId, vote: !!vote }, { timeoutMs: 12000 });
   }
 
   function disconnectCreator() {
@@ -371,7 +392,7 @@
           var label = document.getElementById('syncDropdownLabel');
           var prevLabel = label.textContent;
           label.textContent = 'Syncing...';
-          syncCreatorVideos()
+          syncCreatorVideos('manual')
             .then(function (res) {
               label.textContent = res.added ? ('Synced ' + res.added + ' new') : 'Up to date';
               setTimeout(function () { label.textContent = prevLabel; syncItem.classList.remove('is-loading'); }, 2200);
@@ -394,7 +415,7 @@
     if (!getSession()) return;
     setInterval(function () {
       getCreatorConnection().then(function (info) {
-        if (info && info.connected) syncCreatorVideos().catch(function () {});
+        if (info && info.connected) syncCreatorVideos('auto').catch(function () {});
       });
     }, 5 * 60 * 1000);
   }
@@ -666,6 +687,9 @@
     getCategories: getCategories,
     updateDescription: updateDescription,
     toggleFollow: toggleFollow,
-    toggleVideoReaction: toggleVideoReaction
+    toggleVideoReaction: toggleVideoReaction,
+    getPendingCategories: getPendingCategories,
+    resolveVideoCategory: resolveVideoCategory,
+    voteVideoCategory: voteVideoCategory
   };
 })(window);

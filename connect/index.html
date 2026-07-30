@@ -235,6 +235,24 @@
   .cc-popover ol{ padding-left:18px; font-size:13px; color:var(--mid); line-height:1.6; }
   .cc-popover-close{ position:absolute; top:14px; right:14px; background:none; border:none; cursor:pointer; color:var(--soft); }
   .cc-popover-close:hover{ color:var(--ink); }
+
+  /* ---------- Pending category panel (JIC hashtag dropdown) ---------- */
+  .pending-cat-panel{
+    margin-top:26px; border:1px solid var(--line); border-radius:16px; padding:20px 22px;
+    background:var(--paper-dim);
+  }
+  .pending-cat-head{ display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+  .pending-cat-sub{ font-size:13px; color:var(--mid); line-height:1.5; }
+  .pending-cat-row{
+    display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line);
+  }
+  .pending-cat-row:first-of-type{ border-top:none; }
+  .pending-cat-thumb{ width:64px; height:36px; border-radius:6px; object-fit:cover; flex-shrink:0; background:var(--line); }
+  .pending-cat-title{ font-size:13px; line-height:1.4; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cc-select{
+    font-family:'Inter', sans-serif; font-size:13px; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink); flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -387,6 +405,15 @@
     </div>
 
   </div>
+
+  <div class="pending-cat-panel" id="pendingCatPanel" style="display:none;">
+    <div class="pending-cat-head">
+      <span class="cc-label">Needs a category</span>
+      <span class="pending-cat-sub">These titles carried more than one Alisilia hashtag -- pick which one actually fits.</span>
+    </div>
+    <div id="pendingCatList"></div>
+  </div>
+
 </section>
 
 <footer>
@@ -452,11 +479,12 @@
         var btn = e.currentTarget;
         btn.disabled = true;
         btn.textContent = 'Syncing...';
-        AlisiliaAuth.syncCreatorVideos()
+        AlisiliaAuth.syncCreatorVideos('manual')
           .then(function (res) {
             btn.disabled = false;
             btn.textContent = 'Sync Now';
             window.toast(res.added ? (res.added + ' new video(s) found.') : 'You are already up to date.', 'Synced', 'ok');
+            loadPendingCategories();
             return AlisiliaAuth.getCreatorConnection(true);
           })
           .then(renderConnectedState)
@@ -475,12 +503,107 @@
           .then(function () {
             window.toast('Channel disconnected.', 'Done', 'ok');
             renderDisconnectedState();
+            document.getElementById('pendingCatPanel').style.display = 'none';
           })
           .catch(function (err) {
             btn.disabled = false;
             window.toast(err.message || 'Could not disconnect.', 'Error');
           });
       });
+
+      loadPendingCategories();
+    }
+
+    // ---- "Needs a category" panel: videos a manual sync couldn't
+    // resolve on its own because the title carried 2+ Alisilia hashtags.
+    function loadPendingCategories() {
+      const panel = document.getElementById('pendingCatPanel');
+      const list = document.getElementById('pendingCatList');
+
+      Promise.all([AlisiliaAuth.getPendingCategories(), AlisiliaAuth.getCategories()])
+        .then(function (results) {
+          const videos = results[0].videos || [];
+          const allCategories = results[1].categories || results[1] || [];
+
+          if (videos.length === 0) {
+            panel.style.display = 'none';
+            return;
+          }
+          panel.style.display = 'block';
+          list.innerHTML = '';
+
+          videos.forEach(function (v) {
+            const row = document.createElement('div');
+            row.className = 'pending-cat-row';
+
+            const thumb = document.createElement('img');
+            thumb.className = 'pending-cat-thumb';
+            thumb.src = v.thumbnail_url || '';
+            thumb.alt = '';
+            row.appendChild(thumb);
+
+            const title = document.createElement('div');
+            title.className = 'pending-cat-title';
+            title.textContent = v.title;
+            title.title = v.title;
+            row.appendChild(title);
+
+            const select = document.createElement('select');
+            select.className = 'cc-select';
+            // Candidates (the actual hashtags found) first, then a
+            // divider, then every other category in case none of the
+            // tagged ones are actually right.
+            const candidateKeys = (v.candidates || []).map(function (c) { return c.key; });
+            v.candidates.forEach(function (c) {
+              const opt = document.createElement('option');
+              opt.value = c.key;
+              opt.textContent = c.label;
+              if (c.key === v.suggested_category) opt.selected = true;
+              select.appendChild(opt);
+            });
+            const others = allCategories.filter(function (c) {
+              return candidateKeys.indexOf(c.key) === -1 && c.key !== 'all';
+            });
+            if (others.length > 0) {
+              const divider = document.createElement('option');
+              divider.disabled = true;
+              divider.textContent = '───';
+              select.appendChild(divider);
+              others.forEach(function (c) {
+                const opt = document.createElement('option');
+                opt.value = c.key;
+                opt.textContent = c.label;
+                select.appendChild(opt);
+              });
+            }
+            row.appendChild(select);
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'btn btn-solid';
+            confirmBtn.textContent = 'Confirm';
+            confirmBtn.addEventListener('click', function () {
+              confirmBtn.disabled = true;
+              confirmBtn.textContent = 'Saving...';
+              AlisiliaAuth.resolveVideoCategory(v.id, select.value)
+                .then(function () {
+                  window.toast('Categorized.', 'Done', 'ok');
+                  row.remove();
+                  if (!list.children.length) panel.style.display = 'none';
+                })
+                .catch(function (err) {
+                  confirmBtn.disabled = false;
+                  confirmBtn.textContent = 'Confirm';
+                  window.toast(err.message || 'Could not save that.', 'Error');
+                });
+            });
+            row.appendChild(confirmBtn);
+
+            list.appendChild(row);
+          });
+        })
+        .catch(function () {
+          panel.style.display = 'none';
+        });
     }
 
     function renderDisconnectedState() {

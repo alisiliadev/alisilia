@@ -197,6 +197,23 @@
   .vreact-btn.active.dislike{ color:#b3261e; }
   .vreact-btn:disabled{ cursor:not-allowed; }
 
+  /* ---------- category chip + community relevance vote ---------- */
+  .vcat-row{ display:flex; align-items:center; gap:10px; padding:12px 0 4px; flex-wrap:wrap; }
+  .vcat-chip{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+    padding:5px 10px; border-radius:999px; background:var(--paper-dim); color:var(--mid); border:1px solid var(--line);
+  }
+  .vcat-vote-label{ font-size:12px; color:var(--soft); }
+  .vcat-vote-btn{
+    display:inline-flex; align-items:center; gap:5px; font-size:12px; font-family:'Inter', sans-serif;
+    background:none; border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer;
+    color:var(--mid); transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .vcat-vote-btn:hover{ border-color:var(--ink); color:var(--ink); }
+  .vcat-vote-btn.active.yes{ color:#0a5fd9; border-color:#0a5fd9; background:rgba(10,95,217,0.06); }
+  .vcat-vote-btn.active.no{ color:#b3261e; border-color:#b3261e; background:rgba(179,38,30,0.06); }
+  .vcat-vote-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
   /* recommended rail -- skeleton only, YouTube-sidebar style: horizontal
      thumb + text instead of the homepage's stacked cards. */
   .watch-side{ display:flex; flex-direction:column; gap:14px; }
@@ -341,6 +358,17 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <div class="vcat-row" id="watchCatRow" style="display:none;">
+          <span class="vcat-chip" id="watchCatChip"></span>
+          <span class="vcat-vote-label">Right category?</span>
+          <button class="vcat-vote-btn" id="watchCatYesBtn" type="button" title="Yes, this fits">
+            <span id="watchCatYesIcon">👍</span> <span id="watchCatYesCount">0</span>
+          </button>
+          <button class="vcat-vote-btn" id="watchCatNoBtn" type="button" title="No, this doesn't fit">
+            <span id="watchCatNoIcon">👎</span> <span id="watchCatNoCount">0</span>
+          </button>
         </div>
       </div>
     </div>
@@ -961,6 +989,57 @@
             .catch(function(err){ window.toast(err.message || 'Could not react to this video.', 'Error'); });
         });
       });
+
+      // ---- category chip + "is this the right category?" vote --------
+      var catRow = document.getElementById('watchCatRow');
+      var catChip = document.getElementById('watchCatChip');
+      var catYesBtn = document.getElementById('watchCatYesBtn');
+      var catNoBtn = document.getElementById('watchCatNoBtn');
+      var catYesCount = document.getElementById('watchCatYesCount');
+      var catNoCount = document.getElementById('watchCatNoCount');
+
+      if (v.category) {
+        catRow.style.display = 'flex';
+        catChip.textContent = v.category;
+        AlisiliaAuth.getCategories().then(function(res){
+          var list = res.categories || res || [];
+          var match = list.filter(function(c){ return c.key === v.category; })[0];
+          if (match) catChip.textContent = match.label;
+        }).catch(function(){});
+
+        var myVote = data.myCategoryVote; // true, false, or null
+        catYesCount.textContent = data.category_yes_count || 0;
+        catNoCount.textContent = data.category_no_count || 0;
+
+        function setCatVoteActive(vote){
+          catYesBtn.classList.toggle('active', vote === true);
+          catYesBtn.classList.toggle('yes', vote === true);
+          catNoBtn.classList.toggle('active', vote === false);
+          catNoBtn.classList.toggle('no', vote === false);
+        }
+        setCatVoteActive(myVote);
+
+        [catYesBtn, catNoBtn].forEach(function(btn){
+          btn.addEventListener('click', function(){
+            if (!AlisiliaAuth.getSession()) { window.location.href = '/enter'; return; }
+            var vote = btn === catYesBtn;
+            catYesBtn.disabled = true;
+            catNoBtn.disabled = true;
+            AlisiliaAuth.voteVideoCategory(v.id, vote)
+              .then(function(res){
+                myVote = res.vote;
+                catYesCount.textContent = res.category_yes_count || 0;
+                catNoCount.textContent = res.category_no_count || 0;
+                setCatVoteActive(myVote);
+              })
+              .catch(function(err){ window.toast(err.message || 'Could not save your vote.', 'Error'); })
+              .then(function(){
+                catYesBtn.disabled = false;
+                catNoBtn.disabled = false;
+              });
+          });
+        });
+      }
     }).catch(function(){
       // Video id doesn't resolve to anything in creators_videos -- keep the
       // rest of the page intact, just replace the player with a minimal
