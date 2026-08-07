@@ -640,13 +640,13 @@
           .then(function () {
             session.first_time = false;
             setSession(session);
+            document.body.style.overflow = '';
             root.remove();
             
             // Post Flowery-Key: Prompt for PFP Setup
             return showPfpOnboarding();
           })
           .then(function() {
-            document.body.style.overflow = '';
             resolve();
           })
           .catch(function (err) {
