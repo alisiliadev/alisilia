@@ -48,8 +48,7 @@
     border-bottom:1px solid var(--line);
     position:relative;
     z-index:30;
-    gap: 20px;
-    flex-wrap: wrap;
+    gap: 16px;
   }
 
   .brand{
@@ -75,10 +74,9 @@
 
   /* --- SEARCH BAR --- */
   .search-wrap {
-    flex: 1;
-    min-width: 280px;
-    max-width: 420px;
+    width: 300px;
     position: relative;
+    flex-shrink: 1;
   }
 
   .search-input {
@@ -233,6 +231,7 @@
     align-items:center;
     gap:10px;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .btn{
@@ -752,16 +751,16 @@
 
 <script>
   // ---------- Feed: skeletons while loading, then real classified/ranked videos ----------
-  const grid = document.getElementById('grid');
-  const feedStatus = document.querySelector('.feed-status');
-  const subnav = document.getElementById('subnav');
-  const searchInput = document.getElementById('searchInput');
-  const searchResults = document.getElementById('searchResults');
+  var grid = document.getElementById('grid');
+  var feedStatus = document.querySelector('.feed-status');
+  var subnav = document.getElementById('subnav');
+  var searchInput = document.getElementById('searchInput');
+  var searchResults = document.getElementById('searchResults');
 
   let CATEGORY_LABELS = {};
   let ALL_VIDEOS = []; // Store all videos for local search
 
-  const skeletonCard = () => `
+  var skeletonCard = () => `
     <div class="card-sk">
       <div class="thumb-sk"></div>
       <div class="row-sk">
@@ -792,11 +791,11 @@
   }
 
   function renderVideoCard(v){
-    const watchHref = '/watch/' + encodeURIComponent(v.video_id);
-    const thumb = v.thumbnail_url || ('https://i.ytimg.com/vi/' + encodeURIComponent(v.video_id) + '/hqdefault.jpg');
-    const avatar = v.creator && v.creator.channel_thumbnail ? v.creator.channel_thumbnail : '/justlogo.png';
-    const channelName = (v.creator && v.creator.channel_title) || 'Unknown creator';
-    const title = escapeHtml(v.title || 'Untitled');
+    var watchHref = '/watch/' + encodeURIComponent(v.video_id);
+    var thumb = v.thumbnail_url || ('https://i.ytimg.com/vi/' + encodeURIComponent(v.video_id) + '/hqdefault.jpg');
+    var avatar = v.creator && v.creator.channel_thumbnail ? v.creator.channel_thumbnail : '/justlogo.png';
+    var channelName = (v.creator && v.creator.channel_title) || 'Unknown creator';
+    var title = escapeHtml(v.title || 'Untitled');
     return (
       '<a class="vcard" href="' + watchHref + '">' +
         '<div class="vthumb-wrap"><img src="' + thumb + '" alt="" loading="lazy"></div>' +
@@ -814,14 +813,14 @@
 
   // ---------- SEARCH FUNCTIONALITY ----------
   let currentSearchCategory = null;
-  const activeHashtags = new Set();
+  var activeHashtags = new Set();
 
   function normalizeSearchText(text) {
     return text.toLowerCase().trim();
   }
 
   function performSearch() {
-    const query = normalizeSearchText(searchInput.value);
+    var query = normalizeSearchText(searchInput.value);
     
     if (!query && activeHashtags.size === 0) {
       searchResults.classList.remove('show');
@@ -833,7 +832,7 @@
     // Filter by hashtags if any are active
     if (activeHashtags.size > 0) {
       results = results.filter(function(v) {
-        const tags = (v.hashtags || []).map(function(t) { return t.toLowerCase(); });
+        var tags = (v.hashtags || []).map(function(t) { return t.toLowerCase(); });
         return Array.from(activeHashtags).every(function(tag) {
           return tags.includes(tag.toLowerCase());
         });
@@ -857,10 +856,10 @@
       return;
     }
 
-    const resultsHtml = results.slice(0, 8).map(function(v) {
-      const thumb = v.thumbnail_url || ('https://i.ytimg.com/vi/' + encodeURIComponent(v.video_id) + '/hqdefault.jpg');
-      const watchHref = '/watch/' + encodeURIComponent(v.video_id);
-      const category = CATEGORY_LABELS[v.category] || v.category || 'uncategorized';
+    var resultsHtml = results.slice(0, 8).map(function(v) {
+      var thumb = v.thumbnail_url || ('https://i.ytimg.com/vi/' + encodeURIComponent(v.video_id) + '/hqdefault.jpg');
+      var watchHref = '/watch/' + encodeURIComponent(v.video_id);
+      var category = CATEGORY_LABELS[v.category] || v.category || 'uncategorized';
       return (
         '<a href="' + watchHref + '" class="search-result-item">' +
           '<img src="' + thumb + '" alt="" class="search-result-thumb" loading="lazy">' +
@@ -872,11 +871,11 @@
       );
     }).join('');
 
-    const hashtags = extractAllHashtags(results);
-    const hashtagsHtml = hashtags.length > 0 ? (
+    var hashtags = extractAllHashtags(results);
+    var hashtagsHtml = hashtags.length > 0 ? (
       '<div class="search-hashtags">' +
         hashtags.map(function(tag) {
-          const isActive = activeHashtags.has(tag);
+          var isActive = activeHashtags.has(tag);
           return '<button class="search-hashtag-chip' + (isActive ? ' active' : '') + '" data-hashtag="' + escapeHtml(tag) + '">#' + escapeHtml(tag) + '</button>';
         }).join('') +
       '</div>'
@@ -887,7 +886,7 @@
   }
 
   function extractAllHashtags(videos) {
-    const tagsSet = new Set();
+    var tagsSet = new Set();
     videos.forEach(function(v) {
       if (v.hashtags && Array.isArray(v.hashtags)) {
         v.hashtags.forEach(function(tag) {
@@ -911,7 +910,7 @@
   document.addEventListener('click', function(e) {
     if (e.target.classList.contains('search-hashtag-chip')) {
       e.preventDefault();
-      const tag = e.target.getAttribute('data-hashtag');
+      var tag = e.target.getAttribute('data-hashtag');
       if (activeHashtags.has(tag)) {
         activeHashtags.delete(tag);
       } else {
@@ -933,7 +932,7 @@
 
   function loadFeed(category){
     currentCategory = category;
-    const myToken = ++requestToken;
+    var myToken = ++requestToken;
 
     renderSkeletons();
     feedStatus.innerHTML = '<span class="dot"></span>Scouring the Waves...';
@@ -941,7 +940,7 @@
     AlisiliaAuth.getPublicFeed(category, 60)
       .then(function(data){
         if (myToken !== requestToken) return;
-        const videos = (data && data.videos) || [];
+        var videos = (data && data.videos) || [];
         
         // Store for search
         ALL_VIDEOS = videos;
@@ -962,7 +961,7 @@
   }
 
   subnav.addEventListener('click', function(e){
-    const link = e.target.closest('a[data-category]');
+    var link = e.target.closest('a[data-category]');
     if (!link) return;
     e.preventDefault();
     if (link.classList.contains('active')) return;
@@ -984,7 +983,7 @@
 
     AlisiliaAuth.getCategories()
       .then(function(data){
-        const categories = (data && data.categories) || [];
+        var categories = (data && data.categories) || [];
         if (categories.length === 0) throw new Error('No categories returned.');
 
         categories.forEach(function(c){ CATEGORY_LABELS[c.key] = c.label; });
@@ -1005,7 +1004,7 @@
 </script>
 
 <script>
-  const authArea = document.getElementById('authArea');
+  var authArea = document.getElementById('authArea');
   AlisiliaAuth.renderHeader(authArea);
   AlisiliaAuth.enforceFirstTimeGate();
   AlisiliaAuth.startAutoSync();
