@@ -1,0 +1,19 @@
+name: Sync creator videos
+
+on:
+  schedule:
+    # GitHub's floor for schedule intervals is 5 minutes -- actual runs
+    # can lag a few minutes under load, that's a GitHub thing, not
+    # something to fix here.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cron-sync-all
+        run: |
+          curl -fsS -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/cron-sync-all" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
