@@ -209,6 +209,7 @@
     background:none; border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer;
     color:var(--mid); transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
+  .vcat-vote-btn svg{ width:14px; height:14px; }
   .vcat-vote-btn:hover{ border-color:var(--ink); color:var(--ink); }
   .vcat-vote-btn.active.yes{ color:#0a5fd9; border-color:#0a5fd9; background:rgba(10,95,217,0.06); }
   .vcat-vote-btn.active.no{ color:#b3261e; border-color:#b3261e; background:rgba(179,38,30,0.06); }
@@ -364,10 +365,10 @@
           <span class="vcat-chip" id="watchCatChip"></span>
           <span class="vcat-vote-label">Right category?</span>
           <button class="vcat-vote-btn" id="watchCatYesBtn" type="button" title="Yes, this fits">
-            <span id="watchCatYesIcon">👍</span> <span id="watchCatYesCount">0</span>
+            <span id="watchCatYesIcon"></span> <span id="watchCatYesCount">0</span>
           </button>
           <button class="vcat-vote-btn" id="watchCatNoBtn" type="button" title="No, this doesn't fit">
-            <span id="watchCatNoIcon">👎</span> <span id="watchCatNoCount">0</span>
+            <span id="watchCatNoIcon"></span> <span id="watchCatNoCount">0</span>
           </button>
         </div>
       </div>
@@ -997,6 +998,8 @@
       var catNoBtn = document.getElementById('watchCatNoBtn');
       var catYesCount = document.getElementById('watchCatYesCount');
       var catNoCount = document.getElementById('watchCatNoCount');
+      var catYesIcon = document.getElementById('watchCatYesIcon');
+      var catNoIcon = document.getElementById('watchCatNoIcon');
 
       if (v.category) {
         catRow.style.display = 'flex';
@@ -1007,6 +1010,9 @@
           if (match) catChip.textContent = match.label;
         }).catch(function(){});
 
+        catYesIcon.innerHTML = THUMB_UP_OUTLINE;
+        catNoIcon.innerHTML = THUMB_DOWN_OUTLINE;
+
         var myVote = data.myCategoryVote; // true, false, or null
         catYesCount.textContent = data.category_yes_count || 0;
         catNoCount.textContent = data.category_no_count || 0;
@@ -1016,6 +1022,16 @@
           catYesBtn.classList.toggle('yes', vote === true);
           catNoBtn.classList.toggle('active', vote === false);
           catNoBtn.classList.toggle('no', vote === false);
+          if (vote === true) {
+            catYesIcon.innerHTML = THUMB_UP_FILLED;
+            catNoIcon.innerHTML = THUMB_DOWN_OUTLINE;
+          } else if (vote === false) {
+            catYesIcon.innerHTML = THUMB_UP_OUTLINE;
+            catNoIcon.innerHTML = THUMB_DOWN_FILLED;
+          } else {
+            catYesIcon.innerHTML = THUMB_UP_OUTLINE;
+            catNoIcon.innerHTML = THUMB_DOWN_OUTLINE;
+          }
         }
         setCatVoteActive(myVote);
 
